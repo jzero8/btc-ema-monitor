@@ -1,0 +1,17 @@
+{
+  "name": "btc-ema-monitor",
+  "version": "1.0.0",
+  "description": "BTC price vs EMA12/EMA50 H/L/C bands across 15m/1h/4h/1d/1w timeframes, refreshing on 5m candle close",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jzero8/btc-ema-monitor.git"
+  }
+}

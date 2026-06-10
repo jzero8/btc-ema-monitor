@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BTC EMA Monitor</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --surface: #161922;
+    --surface-2: #1d2230;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --text: #e8eaef;
+    --text-2: #a4abba;
+    --text-3: #6b7280;
+    --green: #6ee787;
+    --green-bg: rgba(110,231,135,0.12);
+    --red: #ff7676;
+    --red-bg: rgba(255,118,118,0.12);
+    --amber: #f3b95c;
+    --amber-bg: rgba(243,185,92,0.12);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface-2: #f4f4f6;
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.16);
+      --text: #18181b;
+      --text-2: #52525b;
+      --text-3: #a1a1aa;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 24px; font-size: 14px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+  .title-block { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .title { font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
+  .price-live { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .price-change { font-size: 12px; padding: 3px 10px; border-radius: 4px; font-weight: 500; }
+  .price-change.up { background: var(--green-bg); color: var(--green); }
+  .price-change.down { background: var(--red-bg); color: var(--red); }
+  .meta { font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .dot.loading { background: var(--amber); }
+  .dot.error { background: var(--red); animation: none; }
+  .refresh-btn {
+    font-size: 11px; color: var(--text-2); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 12px; cursor: pointer;
+  }
+  .refresh-btn:hover { background: var(--surface-2); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3);
+    padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  thead th:first-child { text-align: left; width: 80px; }
+  thead th:nth-child(2) { text-align: left; width: 160px; }
+  .tf-header { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .tf-name { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
+  .tf-close-label { font-size: 9px; color: var(--text-3); letter-spacing: 0.05em; text-transform: uppercase; }
+  .tf-close { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 500; }
+  .tf-timer { font-size: 10px; color: var(--text-3); font-variant-numeric: tabular-nums; opacity: 0.7; margin-top: 2px; }
+  .tf-timer.imminent { color: var(--amber); opacity: 1; font-weight: 500; }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  .group-label { font-size: 12px; font-weight: 500; color: var(--text); padding: 12px 10px 4px; vertical-align: middle; }
+  .sub-label { font-size: 12px; color: var(--text-2); padding: 8px 10px; vertical-align: middle; }
+  .sub-label span { font-size: 10px; color: var(--text-3); display: block; margin-top: 2px; }
+  td.cell { padding: 6px 4px; text-align: center; vertical-align: middle; }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 4px;
+    letter-spacing: 0.02em; white-space: nowrap; min-width: 90px;
+  }
+  .badge.above-high  { background: rgba(110,231,135,0.18); color: var(--green); }
+  .badge.same-high   { background: rgba(110,231,135,0.10); color: var(--green); }
+  .badge.above-close { background: rgba(110,231,135,0.06); color: var(--green); opacity: 0.85; }
+  .badge.same-close  { background: rgba(255,255,255,0.06); color: var(--text-2); }
+  .badge.below-close { background: rgba(243,185,92,0.10); color: var(--amber); opacity: 0.85; }
+  .badge.same-low    { background: rgba(255,118,118,0.10); color: var(--red); }
+  .badge.below-low   { background: rgba(255,118,118,0.20); color: var(--red); }
+  .badge.loading     { background: var(--surface-2); color: var(--text-3); }
+  .ema-vals { font-size: 9px; color: var(--text-3); font-variant-numeric: tabular-nums; margin-top: 3px; line-height: 1.3; }
+  .history-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; font-weight: 500; }
+  table.history th { font-size: 10px; padding: 8px 6px; }
+  table.history th:first-child { width: 90px; }
+  table.history td { padding: 6px 6px; font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+  table.history td:first-child { text-align: left; color: var(--text-2); font-size: 10px; }
+  .latest-row { background: var(--surface-2); }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neu { color: var(--text-3); }
+  .footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--text-3); padding-top: 0.75rem; border-top: 1px solid var(--border); margin-top: 1rem; }
+  .countdown { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="title-block">
+      <span class="title">BTC EMA Monitor</span>
+      <span class="price-live" id="live-price">—</span>
+      <span class="price-change" id="price-change-badge" style="display:none"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="meta"><span class="dot loading" id="status-dot"></span><span id="status-text">loading...</span></div>
+      <button class="refresh-btn" onclick="fetchAll()">refresh</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr>
+          <th>EMA</th>
+          <th>Source</th>
+          <th><div class="tf-header"><span class="tf-name">15m</span><span class="tf-close-label">last close</span><span class="tf-close" id="tfp-15m">—</span><span class="tf-timer" id="tfc-15m">—</span></div></th>
+          <th><div class="tf-header"><span class="tf-name">1h</span><span class="tf-close-label">last close</span><span class="tf-close" id="tfp-1h">—</span><span class="tf-timer" id="tfc-1h">—</span></div></th>
+          <th><div class="tf-header"><span class="tf-name">4h</span><span class="tf-close-label">last close</span><span class="tf-close" id="tfp-4h">—</span><span class="tf-timer" id="tfc-4h">—</span></div></th>
+          <th><div class="tf-header"><span class="tf-name">1d</span><span class="tf-close-label">last close</span><span class="tf-close" id="tfp-1d">—</span><span class="tf-timer" id="tfc-1d">—</span></div></th>
+          <th><div class="tf-header"><span class="tf-name">1w</span><span class="tf-close-label">last close</span><span class="tf-close" id="tfp-1w">—</span><span class="tf-timer" id="tfc-1w">—</span></div></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="group-label" rowspan="2">EMA 12</td>
+          <td class="sub-label">Last interval close<span>vs EMA on close</span></td>
+          <td class="cell" id="e12-ic-15m"><span class="badge loading">—</span><div class="ema-vals" id="e12-vals-15m"></div></td>
+          <td class="cell" id="e12-ic-1h"><span class="badge loading">—</span><div class="ema-vals" id="e12-vals-1h"></div></td>
+          <td class="cell" id="e12-ic-4h"><span class="badge loading">—</span><div class="ema-vals" id="e12-vals-4h"></div></td>
+          <td class="cell" id="e12-ic-1d"><span class="badge loading">—</span><div class="ema-vals" id="e12-vals-1d"></div></td>
+          <td class="cell" id="e12-ic-1w"><span class="badge loading">—</span><div class="ema-vals" id="e12-vals-1w"></div></td>
+        </tr>
+        <tr>
+          <td class="sub-label">Last 5 min close<span>current proxy</span></td>
+          <td class="cell" id="e12-5m-15m"><span class="badge loading">—</span></td>
+          <td class="cell" id="e12-5m-1h"><span class="badge loading">—</span></td>
+          <td class="cell" id="e12-5m-4h"><span class="badge loading">—</span></td>
+          <td class="cell" id="e12-5m-1d"><span class="badge loading">—</span></td>
+          <td class="cell" id="e12-5m-1w"><span class="badge loading">—</span></td>
+        </tr>
+        <tr>
+          <td class="group-label" rowspan="2">EMA 50</td>
+          <td class="sub-label">Last interval close<span>vs EMA on close</span></td>
+          <td class="cell" id="e50-ic-15m"><span class="badge loading">—</span><div class="ema-vals" id="e50-vals-15m"></div></td>
+          <td class="cell" id="e50-ic-1h"><span class="badge loading">—</span><div class="ema-vals" id="e50-vals-1h"></div></td>
+          <td class="cell" id="e50-ic-4h"><span class="badge loading">—</span><div class="ema-vals" id="e50-vals-4h"></div></td>
+          <td class="cell" id="e50-ic-1d"><span class="badge loading">—</span><div class="ema-vals" id="e50-vals-1d"></div></td>
+          <td class="cell" id="e50-ic-1w"><span class="badge loading">—</span><div class="ema-vals" id="e50-vals-1w"></div></td>
+        </tr>
+        <tr>
+          <td class="sub-label">Last 5 min close<span>current proxy</span></td>
+          <td class="cell" id="e50-5m-15m"><span class="badge loading">—</span></td>
+          <td class="cell" id="e50-5m-1h"><span class="badge loading">—</span></td>
+          <td class="cell" id="e50-5m-4h"><span class="badge loading">—</span></td>
+          <td class="cell" id="e50-5m-1d"><span class="badge loading">—</span></td>
+          <td class="cell" id="e50-5m-1w"><span class="badge loading">—</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="history-title">5m Close vs Last Interval Close · last 30 min (6 × 5m) · 15m column shows last 15 min only</div>
+    <table class="history">
+      <thead>
+        <tr>
+          <th>Time (HKT)</th>
+          <th>5m Close</th>
+          <th>15m %</th>
+          <th>15m Δ</th>
+          <th>1h %</th>
+          <th>1h Δ</th>
+          <th>4h %</th>
+          <th>4h Δ</th>
+          <th>1d %</th>
+          <th>1d Δ</th>
+          <th>1w %</th>
+          <th>1w Δ</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr><td colspan="12" style="text-align:center;color:var(--text-3);padding:1rem;">loading history…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <span>Binance BTCUSDT spot · refresh aligned to 5m candle close (+3s buffer) · EMA on H/L/C, recomputed only on interval close · countdowns aligned to UTC candle boundaries</span>
+    <span class="countdown">next refresh <span id="countdown">5:00</span></span>
+  </div>
+</div>
+
+<script>
+const TIMEFRAMES = ['15m','1h','4h','1d','1w'];
+const TF_MS = { '15m': 15*60e3, '1h': 3600e3, '4h': 4*3600e3, '1d': 86400e3, '1w': 7*86400e3 };
+const HISTORY_LIMIT = { '15m': 3 }; // 15m only shows last 3 rows; others show all 6
+const LIMIT = 100;
+const BASE = 'https://api.binance.com/api/v3/klines';
+
+let prevPrice = null;
+let countdownSec = 300;
+let countdownTimer = null;
+let intervalTimer = null;
+
+function emaSeries(values, period) {
+  if (values.length < period) return [];
+  const k = 2 / (period + 1);
+  const out = [];
+  let ema = values.slice(0, period).reduce((a,b) => a+b, 0) / period;
+  out.push(ema);
+  for (let i = period; i < values.length; i++) {
+    ema = values[i] * k + ema * (1 - k);
+    out.push(ema);
+  }
+  return out;
+}
+function lastEMA(values, period) {
+  const s = emaSeries(values, period);
+  return s.length ? s[s.length - 1] : null;
+}
+function classify(price, emaHigh, emaClose, emaLow) {
+  const tH = emaHigh * 0.0005, tC = emaClose * 0.0005, tL = emaLow * 0.0005;
+  if (price > emaHigh + tH)             return 'above-high';
+  if (Math.abs(price - emaHigh)  <= tH) return 'same-high';
+  if (price > emaClose + tC)            return 'above-close';
+  if (Math.abs(price - emaClose) <= tC) return 'same-close';
+  if (price > emaLow + tL)              return 'below-close';
+  if (Math.abs(price - emaLow)   <= tL) return 'same-low';
+  return 'below-low';
+}
+function labelFor(cls) {
+  return {
+    'above-high':'Above High','same-high':'Same as High',
+    'above-close':'Above Close','same-close':'Same as Close',
+    'below-close':'Below Close','same-low':'Same as Low','below-low':'Below Low'
+  }[cls] || '—';
+}
+function setBadge(id, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const existingVals = el.querySelector('.ema-vals');
+  el.innerHTML = `<span class="badge ${cls}">${labelFor(cls)}</span>`;
+  if (existingVals) el.appendChild(existingVals);
+}
+function setVals(id, h, c, l) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = `H ${h.toFixed(1)} · C ${c.toFixed(1)} · L ${l.toFixed(1)}`;
+}
+function setStatus(type, msg) {
+  document.getElementById('status-dot').className = 'dot ' + (type === 'ok' ? '' : type);
+  document.getElementById('status-text').textContent = msg;
+}
+
+async function fetchKlines(interval, limit = LIMIT) {
+  const url = `${BASE}?symbol=BTCUSDT&interval=${interval}&limit=${limit + 1}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Binance ' + interval + ' ' + r.status);
+  const data = await r.json();
+  return data.slice(0, -1).map(c => ({
+    closeTime: c[6],
+    open: parseFloat(c[1]), high: parseFloat(c[2]),
+    low: parseFloat(c[3]), close: parseFloat(c[4])
+  }));
+}
+async function fetch5mLast7() {
+  const url = `${BASE}?symbol=BTCUSDT&interval=5m&limit=8`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Binance 5m ' + r.status);
+  const data = await r.json();
+  return data.slice(0, -1).map(c => ({ closeTime: c[6], close: parseFloat(c[4]) }));
+}
+
+function nextCloseMs(tf) {
+  const now = Date.now();
+  if (tf === '1w') {
+    const d = new Date(now);
+    const dow = d.getUTCDay();
+    const daysToNextMon = (8 - dow) % 7 || 7;
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + daysToNextMon, 0, 0, 0);
+  }
+  const ms = TF_MS[tf];
+  return Math.floor(now / ms) * ms + ms;
+}
+function fmtCountdown(msLeft) {
+  if (msLeft < 0) msLeft = 0;
+  const totalSec = Math.floor(msLeft / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  if (days > 0) return `${days}d ${String(hours).padStart(2,'0')}h`;
+  if (hours > 0) return `${hours}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  return `${mins}:${String(secs).padStart(2,'0')}`;
+}
+function updateIntervalTimers() {
+  const now = Date.now();
+  for (const tf of TIMEFRAMES) {
+    const el = document.getElementById('tfc-' + tf);
+    if (!el) continue;
+    const left = nextCloseMs(tf) - now;
+    el.textContent = fmtCountdown(left);
+    el.classList.toggle('imminent', left < 5 * 60 * 1000);
+  }
+}
+
+function renderHistory(history) {
+  const body = document.getElementById('history-body');
+  if (!history.length) return;
+  body.innerHTML = history.map((h, i) => {
+    const tStr = new Date(h.time).toLocaleTimeString('en-HK', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Hong_Kong' });
+    const isLatest = i === 0;
+    return `<tr${isLatest ? ' class="latest-row"' : ''}>
+      <td>${tStr}${isLatest ? ' ●' : ''}</td>
+      <td>${h.close.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+      ${TIMEFRAMES.map(tf => {
+        const limit = HISTORY_LIMIT[tf];
+        if (limit !== undefined && i >= limit) {
+          return `<td class="neu">—</td><td class="neu">—</td>`;
+        }
+        const pct = h[tf].pct, diff = h[tf].diff;
+        const cls = pct > 0.02 ? 'pos' : pct < -0.02 ? 'neg' : 'neu';
+        return `<td class="${cls}">${(pct >= 0 ? '+' : '') + pct.toFixed(3)}%</td>
+                <td class="${cls}">${(diff >= 0 ? '+' : '') + diff.toFixed(1)}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+}
+
+async function fetchAll() {
+  setStatus('loading', 'fetching...');
+  try {
+    const [fiveMinBars, m15, h1, h4, d1, w1] = await Promise.all([
+      fetch5mLast7(),
+      fetchKlines('15m'),
+      fetchKlines('1h'),
+      fetchKlines('4h'),
+      fetchKlines('1d'),
+      fetchKlines('1w')
+    ]);
+    const tfData = { '15m': m15, '1h': h1, '4h': h4, '1d': d1, '1w': w1 };
+    const emaState = {};
+    for (const tf of TIMEFRAMES) {
+      const candles = tfData[tf];
+      const highs = candles.map(c => c.high);
+      const lows = candles.map(c => c.low);
+      const closes = candles.map(c => c.close);
+      emaState[tf] = {
+        e12: { high: lastEMA(highs, 12), close: lastEMA(closes, 12), low: lastEMA(lows, 12) },
+        e50: { high: lastEMA(highs, 50), close: lastEMA(closes, 50), low: lastEMA(lows, 50) },
+        intervalClose: candles[candles.length - 1].close
+      };
+    }
+    const latest = fiveMinBars[fiveMinBars.length - 1].close;
+    const fmtPrice = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 1 });
+
+    for (const tf of TIMEFRAMES) {
+      const s = emaState[tf];
+      const ic = s.intervalClose;
+      const tfpEl = document.getElementById('tfp-' + tf);
+      if (tfpEl) tfpEl.textContent = fmtPrice.format(ic);
+      if (s.e12.high !== null) {
+        setBadge(`e12-ic-${tf}`, classify(ic, s.e12.high, s.e12.close, s.e12.low));
+        setBadge(`e12-5m-${tf}`, classify(latest, s.e12.high, s.e12.close, s.e12.low));
+        setVals(`e12-vals-${tf}`, s.e12.high, s.e12.close, s.e12.low);
+      }
+      if (s.e50.high !== null) {
+        setBadge(`e50-ic-${tf}`, classify(ic, s.e50.high, s.e50.close, s.e50.low));
+        setBadge(`e50-5m-${tf}`, classify(latest, s.e50.high, s.e50.close, s.e50.low));
+        setVals(`e50-vals-${tf}`, s.e50.high, s.e50.close, s.e50.low);
+      }
+    }
+
+    const priceEl = document.getElementById('live-price');
+    const badge = document.getElementById('price-change-badge');
+    priceEl.textContent = fmtPrice.format(latest);
+    if (prevPrice !== null) {
+      const chg = ((latest - prevPrice) / prevPrice) * 100;
+      badge.textContent = (chg >= 0 ? '▲ +' : '▼ ') + chg.toFixed(3) + '%';
+      badge.className = 'price-change ' + (chg >= 0 ? 'up' : 'down');
+      badge.style.display = 'inline';
+    }
+    prevPrice = latest;
+
+    const history = fiveMinBars.slice().reverse().map(bar => {
+      const row = { time: bar.closeTime, close: bar.close };
+      for (const tf of TIMEFRAMES) {
+        const ic = emaState[tf].intervalClose;
+        row[tf] = { pct: ((bar.close - ic) / ic) * 100, diff: bar.close - ic };
+      }
+      return row;
+    });
+    renderHistory(history);
+
+    const now = new Date().toLocaleTimeString('en-HK', { hour12: false, timeZone: 'Asia/Hong_Kong' });
+    setStatus('ok', 'updated ' + now + ' HKT');
+    resetCountdown();
+  } catch(e) {
+    setStatus('error', 'error — ' + e.message);
+    console.error(e);
+  }
+}
+function resetCountdown() {
+  // Align next refresh to the next 5m candle close (UTC boundary) + small buffer.
+  // Buffer gives Binance a moment to finalize the closed candle before we fetch it.
+  const BUFFER_MS = 3000;
+  const FIVE_MIN_MS = 5 * 60e3;
+  const now = Date.now();
+  const nextBoundary = Math.ceil(now / FIVE_MIN_MS) * FIVE_MIN_MS;
+  const msUntilFire = (nextBoundary - now) + BUFFER_MS;
+  countdownSec = Math.max(1, Math.ceil(msUntilFire / 1000));
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    if (countdownSec <= 0) { clearInterval(countdownTimer); fetchAll(); return; }
+    const m = Math.floor(countdownSec / 60);
+    const s = countdownSec % 60;
+    document.getElementById('countdown').textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+}
+if (intervalTimer) clearInterval(intervalTimer);
+updateIntervalTimers();
+intervalTimer = setInterval(updateIntervalTimers, 1000);
+fetchAll();
+</script>
+</body>
+</html>
