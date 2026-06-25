@@ -170,6 +170,172 @@
     .title { display: none; }
     .panel { padding: 8px 6px; }
   }
+
+  /* ===================================================================
+     EMA Zone section (scoped). Variables only apply inside .ema-zone.
+     Color palette aligned with the upper monitor section.
+     =================================================================== */
+  .ema-zone {
+    /* Surfaces — match upper section */
+    --panel: #161922;
+    --panel-2: #1d2230;
+    --line: rgba(255,255,255,0.08);
+    --line-soft: rgba(255,255,255,0.04);
+
+    /* Text — match upper section's --text / --text-2 / --text-3 */
+    --ink: #e8eaef;
+    --ink-2: #a4abba;
+    --ink-3: #6b7280;
+
+    /* Signal lines — cyan kept as distinctive EMA40 identifier */
+    --chrome: #46c6da;
+    --sig: #3fd0e6;
+
+    /* 7-zone palette — green→amber→red flow matching upper badges */
+    --z0: #6ee787;   /* above high — bright green (matches --green) */
+    --z1: #8fdba1;   /* at high — muted green */
+    --z2: #b0cdb4;   /* above close — pale green */
+    --z3: #a4abba;   /* at close — neutral gray (matches --text-2) */
+    --z4: #f3b95c;   /* below close — amber (matches --amber) */
+    --z5: #ea9a92;   /* at low — muted red */
+    --z6: #ff7676;   /* below low — bright red (matches --red) */
+
+    /* Gap indicators (positive / negative) — match upper green/red */
+    --up: #6ee787;
+    --down: #ff7676;
+
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --disp: 'Space Grotesk', system-ui, sans-serif;
+    font-family: var(--mono);
+    color: var(--ink);
+    margin-top: 16px;
+  }
+  .ema-zone .ez-header {
+    display:flex; flex-wrap:wrap; gap:16px 24px; align-items:flex-end;
+    justify-content:space-between; padding-bottom:16px; border-bottom:1px solid var(--line);
+  }
+  .ema-zone .brand h1 {
+    font-family:var(--disp); font-weight:700; font-size:clamp(18px,2.5vw,24px);
+    margin:0; letter-spacing:-.02em; color: var(--ink);
+  }
+  .ema-zone .brand .sub { color:var(--ink-2); font-size:12px; margin-top:4px; }
+  .ema-zone .brand .tick { color:var(--sig); }
+  .ema-zone .badge {
+    display:flex; align-items:center; gap:14px; padding:10px 14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 0 0 1px #000 inset, 0 18px 40px -28px var(--zone-c,#000);
+  }
+  .ema-zone .badge .dot {
+    width:11px; height:11px; border-radius:50%; background:var(--zone-c,#888);
+    box-shadow:0 0 14px 1px var(--zone-c,#888);
+  }
+  .ema-zone .badge .zname {
+    font-family:var(--disp); font-weight:700; font-size:16px;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--zone-c,#fff);
+  }
+  .ema-zone .badge .gap { font-size:12px; color:var(--ink-2); }
+  .ema-zone .badge .gap b { font-family:var(--mono); font-weight:700; }
+  .ema-zone .prog {
+    height:3px; background:var(--line-soft); border-radius:3px; margin:14px 0 18px; overflow:hidden;
+  }
+  .ema-zone .prog > i {
+    display:block; height:100%; width:0%;
+    background:linear-gradient(90deg,var(--chrome),var(--sig)); transition:width 1s linear;
+  }
+  .ema-zone .ez-grid { display:grid; grid-template-columns:1fr 300px; gap:16px; }
+  @media (max-width:860px) { .ema-zone .ez-grid { grid-template-columns:1fr; } }
+  .ema-zone .ez-card {
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  }
+  .ema-zone .ez-card > .cap {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; border-bottom:1px solid var(--line-soft);
+  }
+  .ema-zone .cap .t {
+    font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-2);
+  }
+  .ema-zone .chartwrap { position:relative; padding:8px 8px 6px; }
+  .ema-zone canvas#ez-chart { display:block; width:100%; height:300px; }
+  .ema-zone .legend {
+    display:flex; flex-wrap:wrap; gap:14px; padding:6px 14px 12px; font-size:11px; color:var(--ink-2);
+  }
+  .ema-zone .legend span { display:inline-flex; align-items:center; gap:7px; }
+  .ema-zone .legend i {
+    width:16px; height:0; border-top-width:2px; border-top-style:solid; display:inline-block;
+  }
+  .ema-zone .gauge { position:relative; height:340px; margin:6px 8px 10px; }
+  .ema-zone .zone {
+    position:absolute; left:0; right:0; display:flex; align-items:center;
+    border-top:1px solid transparent; transition:background .35s ease, box-shadow .35s ease;
+  }
+  .ema-zone .zone .lab {
+    position:absolute; left:10px; font-size:10px; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--ink-2); transition:color .3s;
+  }
+  .ema-zone .zone .w {
+    position:absolute; right:10px; font-size:10px; color:var(--ink-3); font-variant-numeric:tabular-nums;
+  }
+  .ema-zone .zone.active { box-shadow:inset 3px 0 0 0 var(--zc); }
+  .ema-zone .zone.active .lab { color:var(--zc); font-weight:700; }
+  .ema-zone .ref {
+    position:absolute; left:0; right:0; height:0; border-top:1px dashed var(--ref-c,#5b6675);
+  }
+  .ema-zone .ref .rl {
+    position:absolute; right:8px; top:-8px; font-size:9px; color:var(--ref-c,#7a8696);
+    background:var(--panel); padding:0 4px;
+  }
+  .ema-zone .needle {
+    position:absolute; left:0; right:0; height:0; z-index:5;
+    border-top:2px solid var(--sig); transition:top .55s cubic-bezier(.22,.61,.36,1);
+  }
+  .ema-zone .needle::before {
+    content:""; position:absolute; left:-1px; top:-5px; width:9px; height:9px;
+    border-radius:50%; background:var(--sig); box-shadow:0 0 12px 1px var(--sig);
+  }
+  .ema-zone .needle .tag {
+    position:absolute; left:14px; top:-11px; font-size:11px; font-weight:700;
+    color:#0a1820; background:var(--sig); padding:1px 7px; border-radius:6px; white-space:nowrap;
+  }
+  .ema-zone .histcard { margin-top:16px; }
+  .ema-zone .ez-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ema-zone #ez-histtable {
+    width:100%; border-collapse:collapse; font-size:12px; font-variant-numeric:tabular-nums;
+  }
+  .ema-zone #ez-histtable thead th {
+    font-weight:500; color:var(--ink-3); text-transform:uppercase; letter-spacing:.1em;
+    font-size:10px; text-align:right; padding:10px 14px; border-bottom:1px solid var(--line-soft);
+  }
+  .ema-zone #ez-histtable thead th:first-child,
+  .ema-zone #ez-histtable thead th:nth-child(2) { text-align:left; }
+  .ema-zone #ez-histtable tbody td {
+    padding:9px 14px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap;
+  }
+  .ema-zone #ez-histtable tbody td:first-child { text-align:left; color:var(--ink-2); }
+  .ema-zone #ez-histtable tbody td.zc { text-align:left; font-weight:500; color: var(--ink); }
+  .ema-zone #ez-histtable tbody tr.latest { background:linear-gradient(90deg,#1a2330,transparent); }
+  .ema-zone #ez-histtable tbody tr:last-child td { border-bottom:0; }
+  .ema-zone .pill {
+    display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; vertical-align:middle;
+  }
+  .ema-zone .ez-pos { color:var(--up); }
+  .ema-zone .ez-neg { color:var(--down); }
+  .ema-zone .err { display:none; padding:14px; gap:12px; align-items:center; flex-wrap:wrap; }
+  .ema-zone .err.show { display:flex; }
+  .ema-zone .err .msg { flex:1; min-width:240px; color:var(--ink-2); font-size:12px; }
+  .ema-zone .err .msg b { color:var(--down); }
+
+  /* mobile shrink for EMA Zone */
+  @media (max-width: 760px) {
+    .ema-zone { font-size: 12px; }
+    .ema-zone .ez-grid { gap: 10px; }
+    .ema-zone canvas#ez-chart { height: 240px; }
+    .ema-zone .gauge { height: 280px; }
+    .ema-zone .badge { padding: 8px 12px; }
+    .ema-zone .badge .zname { font-size: 14px; }
+    .ema-zone #ez-histtable { min-width: 580px; }
+    .ema-zone #ez-histtable thead th,
+    .ema-zone #ez-histtable tbody td { padding: 7px 10px; font-size: 11px; }
+  }
 </style>
 </head>
 <body>
@@ -242,31 +408,54 @@
     </div>
   </div>
 
-  <div class="panel">
-    <div class="history-title">5m Close vs Last Interval Close · last 30 min (6 × 5m) · 15m column shows last 15 min only</div>
-    <div class="scroll-hint"><span>swipe to see all timeframes</span><span class="arrow">⇿</span></div>
-    <div class="scroll-wrap">
-    <table class="history">
-      <thead>
-        <tr>
-          <th>Time (HKT)</th>
-          <th>5m Close</th>
-          <th>15m %</th>
-          <th>15m Δ</th>
-          <th>1h %</th>
-          <th>1h Δ</th>
-          <th>4h %</th>
-          <th>4h Δ</th>
-          <th>1d %</th>
-          <th>1d Δ</th>
-          <th>1w %</th>
-          <th>1w Δ</th>
-        </tr>
-      </thead>
-      <tbody id="history-body">
-        <tr><td colspan="12" style="text-align:center;color:var(--text-3);padding:1rem;">loading history…</td></tr>
-      </tbody>
-    </table>
+  <div class="ema-zone">
+    <header class="ez-header">
+      <div class="brand">
+        <h1>BTC EMA Zone</h1>
+        <div class="sub">BTCUSDT · 5m · EMA50 high/close/low envelope · <span class="tick">EMA40 signal</span></div>
+      </div>
+      <div class="badge" id="ez-badge">
+        <span class="dot"></span>
+        <div>
+          <div class="zname" id="ez-zname">—</div>
+          <div class="gap" id="ez-gap">awaiting first candle</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="prog"><i id="ez-prog"></i></div>
+
+    <div class="ez-grid">
+      <div class="ez-card">
+        <div class="cap"><span class="t">Envelope · last 60 × 5m</span><span class="t" id="ez-chart-range"></span></div>
+        <div class="chartwrap"><canvas id="ez-chart"></canvas></div>
+        <div class="legend">
+          <span><i style="border-color:var(--z1)"></i>EMA50 high</span>
+          <span><i style="border-color:var(--ink-2)"></i>EMA50 close</span>
+          <span><i style="border-color:var(--z5)"></i>EMA50 low</span>
+          <span><i style="border-color:var(--sig); border-top-width:3px"></i>EMA40 close</span>
+        </div>
+      </div>
+
+      <div class="ez-card">
+        <div class="cap"><span class="t">Strata · ±$5 band</span><span class="t" id="ez-gauge-px"></span></div>
+        <div class="gauge" id="ez-gauge"></div>
+      </div>
+    </div>
+
+    <div class="ez-card histcard">
+      <div class="cap"><span class="t">Past 30 min · 6 closed 5m candles</span><span class="t">HKT</span></div>
+      <div id="ez-err" class="err">
+        <div class="msg"><b>Couldn't reach Binance.</b> Retrying at the next candle close.</div>
+      </div>
+      <div class="ez-table-wrap">
+        <table id="ez-histtable">
+          <thead>
+            <tr><th>Time</th><th>Zone</th><th>EMA40</th><th>H(50)</th><th>C(50)</th><th>L(50)</th><th>Gap</th></tr>
+          </thead>
+          <tbody id="ez-histbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -279,7 +468,6 @@
 <script>
 const TIMEFRAMES = ['15m','1h','4h','1d','1w'];
 const TF_MS = { '15m': 15*60e3, '1h': 3600e3, '4h': 4*3600e3, '1d': 86400e3, '1w': 7*86400e3 };
-const HISTORY_LIMIT = { '15m': 3 }; // 15m only shows last 3 rows; others show all 6
 const LIMIT = 100;
 const BASE = 'https://api.binance.com/api/v3/klines';
 
@@ -391,26 +579,7 @@ function updateIntervalTimers() {
 }
 
 function renderHistory(history) {
-  const body = document.getElementById('history-body');
-  if (!history.length) return;
-  body.innerHTML = history.map((h, i) => {
-    const tStr = new Date(h.time).toLocaleTimeString('en-HK', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Hong_Kong' });
-    const isLatest = i === 0;
-    return `<tr${isLatest ? ' class="latest-row"' : ''}>
-      <td>${tStr}${isLatest ? ' ●' : ''}</td>
-      <td>${h.close.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
-      ${TIMEFRAMES.map(tf => {
-        const limit = HISTORY_LIMIT[tf];
-        if (limit !== undefined && i >= limit) {
-          return `<td class="neu">—</td><td class="neu">—</td>`;
-        }
-        const pct = h[tf].pct, diff = h[tf].diff;
-        const cls = pct > 0.02 ? 'pos' : pct < -0.02 ? 'neg' : 'neu';
-        return `<td class="${cls}">${(pct >= 0 ? '+' : '') + pct.toFixed(3)}%</td>
-                <td class="${cls}">${(diff >= 0 ? '+' : '') + diff.toFixed(1)}</td>`;
-      }).join('')}
-    </tr>`;
-  }).join('');
+  // Removed — replaced by EMA Zone section
 }
 
 async function fetchAll() {
@@ -468,15 +637,10 @@ async function fetchAll() {
     }
     prevPrice = latest;
 
-    const history = fiveMinBars.slice().reverse().map(bar => {
-      const row = { time: bar.closeTime, close: bar.close };
-      for (const tf of TIMEFRAMES) {
-        const ic = emaState[tf].intervalClose;
-        row[tf] = { pct: ((bar.close - ic) / ic) * 100, diff: bar.close - ic };
-      }
-      return row;
-    });
-    renderHistory(history);
+    // Trigger EMA Zone section update (independent of TF table)
+    if (window.__emaZoneUpdate) {
+      window.__emaZoneUpdate().catch(e => console.warn('EMA Zone update failed:', e));
+    }
 
     const now = new Date().toLocaleTimeString('en-HK', { hour12: false, timeZone: 'Asia/Hong_Kong' });
     setStatus('ok', 'updated ' + now + ' HKT');
@@ -508,6 +672,216 @@ if (intervalTimer) clearInterval(intervalTimer);
 updateIntervalTimers();
 intervalTimer = setInterval(updateIntervalTimers, 1000);
 fetchAll();
+
+// =====================================================================
+// EMA Zone section (self-contained module, exposes window.__emaZoneUpdate)
+// =====================================================================
+(function() {
+  const CFG = {
+    symbol: "BTCUSDT", interval: "5m",
+    refPeriod: 50, sigPeriod: 40, tolerance: 5,
+    tz: "Asia/Hong_Kong", history: 6, visible: 60, limit: 220,
+    base: "https://api.binance.com/api/v3/klines",
+  };
+  const ZONES = ["above high","at high","above close","at close","below close","at low","below low"];
+  const ZVAR  = ["--z0","--z1","--z2","--z3","--z4","--z5","--z6"];
+  const root = document.querySelector('.ema-zone');
+  if (!root) return;
+  const css = v => getComputedStyle(root).getPropertyValue(v).trim();
+
+  function emaSeries(vals, period){
+    const k = 2/(period+1); let e = vals[0]; const out=[e];
+    for(let i=1;i<vals.length;i++){ e = vals[i]*k + e*(1-k); out.push(e); }
+    return out;
+  }
+  function classifyZone(s,h,c,l,tol){
+    if(s > h+tol) return 0;
+    if(s >= h-tol) return 1;
+    if(s > c+tol) return 2;
+    if(s >= c-tol) return 3;
+    if(s > l+tol) return 4;
+    if(s >= l-tol) return 5;
+    return 6;
+  }
+  function anchor(zi,h,c,l){
+    if(zi<=1) return ["high",h];
+    if(zi<=4) return ["close",c];
+    return ["low",l];
+  }
+  async function fetchKlinesEZ(){
+    const u = `${CFG.base}?symbol=${CFG.symbol}&interval=${CFG.interval}&limit=${CFG.limit}`;
+    const r = await fetch(u);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    return r.json();
+  }
+  function compute(raw){
+    const k = raw.slice(0,-1);
+    const highs=k.map(x=>+x[2]), lows=k.map(x=>+x[3]), closes=k.map(x=>+x[4]);
+    const sH=emaSeries(highs,CFG.refPeriod), sC=emaSeries(closes,CFG.refPeriod),
+          sL=emaSeries(lows,CFG.refPeriod),  sS=emaSeries(closes,CFG.sigPeriod);
+    const n=k.length;
+    const row = i => {
+      const zi=classifyZone(sS[i],sH[i],sC[i],sL[i],CFG.tolerance);
+      const [an,av]=anchor(zi,sH[i],sC[i],sL[i]);
+      return {t:+k[i][6], zi, ema40:sS[i], h:sH[i], c:sC[i], l:sL[i], anchor:an, gap:sS[i]-av};
+    };
+    const hist=[]; for(let i=n-CFG.history;i<n;i++) hist.push(row(i));
+    const vis={ from:Math.max(0,n-CFG.visible),
+                h:sH.slice(-CFG.visible), c:sC.slice(-CFG.visible),
+                l:sL.slice(-CFG.visible), s:sS.slice(-CFG.visible),
+                t:k.slice(-CFG.visible).map(x=>+x[6]) };
+    return {hist, vis};
+  }
+  const fmt = (n,d=2)=> n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const fmtGap = g => (g>=0?"+":"−")+fmt(Math.abs(g));
+  const hhmm = ms => new Date(ms).toLocaleTimeString("en-GB",{timeZone:CFG.tz,hour:"2-digit",minute:"2-digit",hour12:false});
+
+  function renderBadge(latest){
+    const c = css(ZVAR[latest.zi]);
+    const badge=document.getElementById("ez-badge");
+    badge.style.setProperty("--zone-c",c);
+    document.getElementById("ez-zname").textContent = ZONES[latest.zi];
+    const g=document.getElementById("ez-gap");
+    const cls = latest.gap>=0?"ez-pos":"ez-neg";
+    g.innerHTML = `<b class="${cls}">${fmtGap(latest.gap)}</b> vs ${latest.anchor} line`;
+  }
+  function renderGauge(latest){
+    const g=document.getElementById("ez-gauge"); g.innerHTML="";
+    const {h,c,l,ema40,zi}=latest, tol=CFG.tolerance;
+    const span = Math.max(h-l, tol*4);
+    const margin = Math.max(tol*1.6, span*0.14);
+    const hi = Math.max(h, ema40) + margin;
+    const lo = Math.min(l, ema40) - margin;
+    const y = p => (hi-p)/(hi-lo)*100;
+    const bnd = [hi, h+tol, h-tol, c+tol, c-tol, l+tol, l-tol, lo];
+    for(let i=0;i<7;i++){
+      const top=y(bnd[i]), bot=y(bnd[i+1]);
+      const d=document.createElement("div");
+      d.className="zone"+(i===zi?" active":"");
+      const zc=css(ZVAR[i]);
+      d.style.top=top+"%"; d.style.height=(bot-top)+"%";
+      d.style.background=`color-mix(in srgb, ${zc} ${i===zi?22:9}%, transparent)`;
+      d.style.setProperty("--zc",zc);
+      const usd=Math.round(bnd[i]-bnd[i+1]);
+      d.innerHTML=`<span class="lab">${ZONES[i]}</span><span class="w">$${usd}</span>`;
+      g.appendChild(d);
+    }
+    const refs=[["high",h,"--z1"],["close",c,"--ink-2"],["low",l,"--z5"]];
+    for(const [name,val,v] of refs){
+      const r=document.createElement("div"); r.className="ref";
+      r.style.top=y(val)+"%"; r.style.setProperty("--ref-c",css(v));
+      r.innerHTML=`<span class="rl">${name} ${fmt(val,0)}</span>`;
+      g.appendChild(r);
+    }
+    const nd=document.createElement("div"); nd.className="needle";
+    nd.style.top=y(ema40)+"%";
+    nd.innerHTML=`<span class="tag">EMA40 ${fmt(ema40,0)}</span>`;
+    g.appendChild(nd);
+    document.getElementById("ez-gauge-px").textContent = `$${fmt(lo,0)}–$${fmt(hi,0)}`;
+  }
+  function renderHist(hist){
+    const b=document.getElementById("ez-histbody"); b.innerHTML="";
+    const rows=[...hist].reverse();
+    rows.forEach((r,idx)=>{
+      const last = idx===0;
+      const zc=css(ZVAR[r.zi]);
+      const gcls=r.gap>=0?"ez-pos":"ez-neg";
+      const tr=document.createElement("tr"); if(last) tr.className="latest";
+      tr.innerHTML=
+        `<td>${hhmm(r.t)}</td>`+
+        `<td class="zc"><span class="pill" style="background:${zc}"></span>${ZONES[r.zi]}</td>`+
+        `<td>${fmt(r.ema40)}</td><td>${fmt(r.h)}</td><td>${fmt(r.c)}</td><td>${fmt(r.l)}</td>`+
+        `<td class="${gcls}">${fmtGap(r.gap)} ${r.anchor}</td>`;
+      b.appendChild(tr);
+    });
+  }
+  function renderChart(vis){
+    const cv=document.getElementById("ez-chart");
+    const dpr=Math.min(window.devicePixelRatio||1, 2);
+    const W=cv.clientWidth, H=cv.clientHeight;
+    cv.width=W*dpr; cv.height=H*dpr;
+    const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+    const padL=10,padR=64,padT=14,padB=22;
+    const all=[...vis.h,...vis.c,...vis.l,...vis.s];
+    let mn=Math.min(...all), mx=Math.max(...all); const p=(mx-mn)*0.08||1; mn-=p; mx+=p;
+    const n=vis.s.length;
+    const X=i=> padL + (W-padL-padR)*(n<=1?0:i/(n-1));
+    const Y=v=> padT + (H-padT-padB)*(1-(v-mn)/(mx-mn));
+    ctx.font="10px "+css("--mono"); ctx.textBaseline="middle";
+    for(let g=0;g<=4;g++){
+      const yy=padT+(H-padT-padB)*g/4; const val=mx-(mx-mn)*g/4;
+      ctx.strokeStyle="rgba(255,255,255,.05)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(W-padR,yy); ctx.stroke();
+      ctx.fillStyle=css("--ink-3"); ctx.textAlign="left";
+      ctx.fillText(Math.round(val).toLocaleString("en-US"), W-padR+6, yy);
+    }
+    ctx.textAlign="center"; ctx.fillStyle=css("--ink-3");
+    for(const i of [0, Math.floor(n/2), n-1]){
+      if(i<0||i>=n) continue;
+      ctx.fillText(hhmm(vis.t[i]), X(i), H-7);
+    }
+    const path=arr=>{ ctx.beginPath(); arr.forEach((v,i)=> i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v))); };
+    const fillBand=(a,b,color)=>{
+      ctx.beginPath();
+      a.forEach((v,i)=> i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));
+      for(let i=b.length-1;i>=0;i--) ctx.lineTo(X(i),Y(b[i]));
+      ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+    };
+    fillBand(vis.h,vis.c, "rgba(110,231,135,.08)");  /* green tint, like upper --green-bg */
+    fillBand(vis.c,vis.l, "rgba(255,118,118,.08)");  /* red tint, like upper --red-bg */
+    ctx.lineWidth=1.4;
+    ctx.strokeStyle=css("--z1");   path(vis.h); ctx.stroke();
+    ctx.strokeStyle=css("--ink-2");path(vis.c); ctx.stroke();
+    ctx.strokeStyle=css("--z5");   path(vis.l); ctx.stroke();
+    ctx.lineWidth=2.6; ctx.strokeStyle=css("--sig"); ctx.lineJoin="round";
+    path(vis.s); ctx.stroke();
+    const lx=X(n-1), ly=Y(vis.s[n-1]);
+    ctx.fillStyle=css("--sig"); ctx.beginPath(); ctx.arc(lx,ly,3.6,0,7); ctx.fill();
+    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#0f1115';
+    ctx.lineWidth=2; ctx.stroke();
+    document.getElementById("ez-chart-range").textContent =
+      `$${Math.round(mn).toLocaleString()}–$${Math.round(mx).toLocaleString()}`;
+  }
+  function showError(on){
+    document.getElementById("ez-err").classList.toggle("show",on);
+  }
+  let lastRaw = null;
+  async function update(){
+    try{
+      const raw = await fetchKlinesEZ();
+      lastRaw = raw;
+      const {hist,vis} = compute(raw);
+      const latest = hist[hist.length-1];
+      showError(false);
+      renderBadge(latest); renderGauge(latest); renderHist(hist); renderChart(vis);
+    }catch(e){
+      showError(true);
+      throw e;
+    }
+  }
+  // progress bar ticks every second toward next 5m boundary + 3s
+  function tickProgress(){
+    const PERIOD = 300000, PAD = 3000;
+    const now = Date.now();
+    const next = now + (PERIOD - (now%PERIOD)) + PAD;
+    const left = Math.max(0, next - now);
+    const pct = 100*(1 - left/(PERIOD+PAD));
+    const el = document.getElementById('ez-prog');
+    if (el) el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+  setInterval(tickProgress, 1000);
+  tickProgress();
+  // redraw chart on resize
+  let resizeT;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => { if (lastRaw) renderChart(compute(lastRaw).vis); }, 150);
+  });
+  // expose to outer fetchAll
+  window.__emaZoneUpdate = update;
+  // initial render (independent of main fetchAll which also triggers it)
+  update().catch(e => console.warn('EMA Zone initial load failed:', e));
+})();
 </script>
 </body>
 </html>
