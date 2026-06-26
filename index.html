@@ -319,6 +319,14 @@
   }
   .ema-zone .ez-pos { color:var(--up); }
   .ema-zone .ez-neg { color:var(--down); }
+  .ema-zone .ez-arrow {
+    display: inline-block;
+    width: 12px;
+    font-size: 10px;
+    text-align: center;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
   .ema-zone .err { display:none; padding:14px; gap:12px; align-items:center; flex-wrap:wrap; }
   .ema-zone .err.show { display:flex; }
   .ema-zone .err .msg { flex:1; min-width:240px; color:var(--ink-2); font-size:12px; }
@@ -786,11 +794,24 @@ fetchAll();
       const last = idx===0;
       const zc=css(ZVAR[r.zi]);
       const gcls=r.gap>=0?"ez-pos":"ez-neg";
+      // Compare EMA40 to the previous (older) row for momentum direction
+      const prev = rows[idx+1];
+      let arrow;
+      if (!prev) {
+        arrow = '<span class="ez-arrow" style="opacity:.25">·</span>';
+      } else if (Math.abs(r.ema40 - prev.ema40) < 0.01) {
+        arrow = '<span class="ez-arrow" style="opacity:.4">·</span>';
+      } else if (r.ema40 > prev.ema40) {
+        arrow = '<span class="ez-arrow ez-pos">▲</span>';
+      } else {
+        arrow = '<span class="ez-arrow ez-neg">▼</span>';
+      }
       const tr=document.createElement("tr"); if(last) tr.className="latest";
       tr.innerHTML=
         `<td>${hhmm(r.t)}</td>`+
         `<td class="zc"><span class="pill" style="background:${zc}"></span>${ZONES[r.zi]}</td>`+
-        `<td>${fmt(r.ema40)}</td><td>${fmt(r.h)}</td><td>${fmt(r.c)}</td><td>${fmt(r.l)}</td>`+
+        `<td>${arrow}${fmt(r.ema40)}</td>`+
+        `<td>${fmt(r.h)}</td><td>${fmt(r.c)}</td><td>${fmt(r.l)}</td>`+
         `<td class="${gcls}">${fmtGap(r.gap)} ${r.anchor}</td>`;
       b.appendChild(tr);
     });
