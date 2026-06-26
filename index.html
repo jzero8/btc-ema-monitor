@@ -321,11 +321,12 @@
   .ema-zone .ez-neg { color:var(--down); }
   .ema-zone .ez-arrow {
     display: inline-block;
-    width: 12px;
+    min-width: 18px;
     font-size: 10px;
     text-align: center;
     margin-right: 4px;
     vertical-align: middle;
+    letter-spacing: -1px;
   }
   .ema-zone .err { display:none; padding:14px; gap:12px; align-items:center; flex-wrap:wrap; }
   .ema-zone .err.show { display:flex; }
@@ -787,6 +788,45 @@ fetchAll();
     g.appendChild(nd);
     document.getElementById("ez-gauge-px").textContent = `$${fmt(lo,0)}–$${fmt(hi,0)}`;
   }
+  // Acceleration thresholds for EMA40 momentum arrows
+  const FLAT_THRESHOLD = 1.0;   // EMA40 change below this is "flat" baseline
+  const ACCEL_RATIO    = 1.3;   // this move >= 1.3× previous move → accelerating
+  const DECEL_RATIO    = 0.7;   // this move <= 0.7× previous move → decelerating
+
+  function momentumArrow(r, prev1, prev2) {
+    if (!prev1) {
+      return { symbol: '·', cls: 'ez-arrow', style: 'opacity:.25' };
+    }
+    const currentMove = r.ema40 - prev1.ema40;
+    if (Math.abs(currentMove) < FLAT_THRESHOLD) {
+      return { symbol: '·', cls: 'ez-arrow', style: 'opacity:.4' };
+    }
+    const isUp = currentMove > 0;
+    const base = isUp ? '▲' : '▼';
+    const dirCls = 'ez-arrow ' + (isUp ? 'ez-pos' : 'ez-neg');
+    if (!prev2) {
+      return { symbol: base, cls: dirCls, style: '' };
+    }
+    const prevMove = prev1.ema40 - prev2.ema40;
+    // Previous move was effectively flat — going from flat to moving = acceleration
+    if (Math.abs(prevMove) < FLAT_THRESHOLD) {
+      return { symbol: base + base, cls: dirCls, style: '' };
+    }
+    // Direction reversal — show direction only, accel/decel concept doesn't apply
+    if ((prevMove > 0) !== isUp) {
+      return { symbol: base, cls: dirCls, style: '' };
+    }
+    // Same direction, both meaningful moves — compare magnitudes
+    const ratio = Math.abs(currentMove) / Math.abs(prevMove);
+    if (ratio >= ACCEL_RATIO) {
+      return { symbol: base + base, cls: dirCls, style: '' };          // accelerating
+    } else if (ratio <= DECEL_RATIO) {
+      return { symbol: base + '·', cls: dirCls, style: '' };           // decelerating
+    } else {
+      return { symbol: base, cls: dirCls, style: '' };                 // same speed
+    }
+  }
+
   function renderHist(hist){
     const b=document.getElementById("ez-histbody"); b.innerHTML="";
     const rows=[...hist].reverse();
@@ -794,18 +834,8 @@ fetchAll();
       const last = idx===0;
       const zc=css(ZVAR[r.zi]);
       const gcls=r.gap>=0?"ez-pos":"ez-neg";
-      // Compare EMA40 to the previous (older) row for momentum direction
-      const prev = rows[idx+1];
-      let arrow;
-      if (!prev) {
-        arrow = '<span class="ez-arrow" style="opacity:.25">·</span>';
-      } else if (Math.abs(r.ema40 - prev.ema40) < 0.01) {
-        arrow = '<span class="ez-arrow" style="opacity:.4">·</span>';
-      } else if (r.ema40 > prev.ema40) {
-        arrow = '<span class="ez-arrow ez-pos">▲</span>';
-      } else {
-        arrow = '<span class="ez-arrow ez-neg">▼</span>';
-      }
+      const m = momentumArrow(r, rows[idx+1], rows[idx+2]);
+      const arrow = `<span class="${m.cls}" style="${m.style}">${m.symbol}</span>`;
       const tr=document.createElement("tr"); if(last) tr.className="latest";
       tr.innerHTML=
         `<td>${hhmm(r.t)}</td>`+
